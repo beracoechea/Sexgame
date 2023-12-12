@@ -1,12 +1,23 @@
 import React, { useState } from 'react';
 import { Text, View, TextInput, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native'; 
 
 const Usuarios = () => {
   const [nombre1, setNombre1] = useState('');
   const [nombre2, setNombre2] = useState('');
+  const navigation = useNavigation(); 
 
-  const handleJuegoPresionado = (tipoJuego) => {
-    Alert.alert(`Iniciar juego entre ${nombre1} y ${nombre2} - Tipo: ${tipoJuego}`);
+  const handleJuegoPresionado = (tipo) => {
+    // Ahora, además de pasar el tipo, también pasamos los nombres de los participantes
+    navigation.navigate('RuletaPareja', { tipo: tipo, participantes: [nombre1, nombre2] });
+    };
+
+  const handleButtonPress = () => {
+    if (nombre1.trim() === '' || nombre2.trim() === '') {
+      Alert.alert('Campos vacíos', 'Ambos nombres deben estar completos antes de continuar.');
+    } else {
+      handleJuegoPresionado('alguna_variable');
+    }
   };
 
   return (
@@ -27,32 +38,33 @@ const Usuarios = () => {
         onChangeText={(text) => setNombre2(text)}
       />
 
-      <TouchableOpacity style={styles.iconButton} onPress={() => handleJuegoPresionado('gay')}>
+      <TouchableOpacity style={styles.iconButton} onPress={handleButtonPress}>
         <Image source={require('./images/masculino.png')} style={styles.iconImage} />
         <Text style={styles.buttonText}> Pareja Gay</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.iconButton} onPress={() => handleJuegoPresionado('heterosexual')}>
+      <TouchableOpacity style={styles.iconButton} onPress={handleButtonPress}>
         <Image source={require('./images/hetero.png')} style={styles.iconImage} />
         <Text style={styles.buttonText}> Pareja Heterosexual</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.iconButton} onPress={() => handleJuegoPresionado('lesbiana')}>
+      <TouchableOpacity style={styles.iconButton} onPress={handleButtonPress}>
         <Image source={require('./images/feminino.png')} style={styles.iconImage} />
         <Text style={styles.buttonText}> Pareja Lesbiana</Text>
       </TouchableOpacity>
     </View>
+    
   );
 };
+
 export default Usuarios;
 
 const styles = StyleSheet.create({
-    iconImage: {
-        width: 30, 
-        height: 30,
-        marginRight: 10, 
-      },
-
+  iconImage: {
+    width: 30,
+    height: 30,
+    marginRight: 10,
+  },
 
   container: {
     flex: 1,

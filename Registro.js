@@ -22,7 +22,7 @@ const Registro = ({ navigation }) => {
         setContraseña('');
 
         // Redirige a la pantalla de inicio de sesión (login)
-        navigation.navigate('Login');
+        navigation.navigate('Modo');
       } else {
         Alert.alert('Nombre de usuario existente', 'El nombre de usuario ya existe. Por favor, elige otro nombre.');
       }
