@@ -1,12 +1,16 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+
 import Inicio from './Inicio';
-import Registro from './Registro';
-import Login from './Login';
 import Ruleta from './Ruleta';
 import Usuarios from './Usuarios';
 import Modo from './Modo';
+import RuletaPareja from './RuletaPareja';
+import Menu from './Menu'
+import Posicion_Diaria from './Dados';
+import PP from './PP';
+import CPuntos from './CPuntos';
  
 
 
@@ -20,14 +24,17 @@ function App(): JSX.Element {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Inicio">
         <Stack.Screen name="Inicio" component={Inicio} options={{ headerShown: false }}/>
-        <Stack.Screen name="Registro" component={Registro} options={{ headerShown: false }}/>
-        <Stack.Screen name="Login" component={Login} options={{ headerShown: false }}/>
-        <Stack.Screen name="Ruleta" component={Ruleta} options={{ headerShown: false }}/>
+        <Stack.Screen name="RuletaPareja" component={RuletaPareja} options={{ headerShown: false }}/>
         <Stack.Screen name="Usuarios" component={Usuarios}options={{headerShown: false}}/>
         <Stack.Screen name="Modo" component={Modo}options={{headerShown: false}}/>
+        <Stack.Screen name="Ruleta" component={Ruleta} options={{ headerShown: false }}/>
+        <Stack.Screen name="Menu" component={Menu} options={{ headerShown: false }}/>
+        <Stack.Screen name="PosicionDiaria" component={Posicion_Diaria} options={{ headerShown: false }}/>
+        <Stack.Screen name="PP"component={PP} options={{headerShown:false}}/>
 
 
-       
+
+
       </Stack.Navigator>
     </NavigationContainer>
     

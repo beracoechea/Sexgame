@@ -1,17 +1,18 @@
 import React, { Component } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 import { Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
 export default class Modo extends Component {
+  
   Pareja = () => {
     this.props.navigation.navigate('Usuarios');
   };
 
   Amigos = () => {
-    this.props.navigation.navigate('Ruleta');
+    this.props.navigation.navigate('Menu');
   };
 
   render() {

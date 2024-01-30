@@ -1,17 +1,75 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, TextInput } from 'react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import Modal from 'react-native-modal';
+import firestore from '@react-native-firebase/firestore';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const Ruleta = () => {
+
+const Ruleta = ({ navigation }) => {
   const [girar, setGirar] = useState(false);
   const [participantes, setParticipantes] = useState([]);
   const [nombreNuevo, setNombreNuevo] = useState('');
   const [ganador, setGanador] = useState(null);
   const [casillaGanadora, setCasillaGanadora] = useState(null);
-  const grados = new Animated.Value(0);
+  const grados = useRef(new Animated.Value(0)).current;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [tiempoRestante, setTiempoRestante] = useState(15);
+  const [reto, setReto] = useState(null);
+  const [tiempoDeReto, setTiempoDeReto] = useState(15);
+  const [temporizadorVisible, setTemporizadorVisible] = useState(false);
+  const [temporizadorIniciado, setTemporizadorIniciado] = useState(false);
+  const timerRef = useRef(null);
+
+
+  const closeModal = () => {
+    clearInterval(timerRef.current);
+    setTemporizadorVisible(false);
+    setTemporizadorIniciado(false);
+    setModalVisible(false);
+  };
 
   const iniciarGiro = () => {
     grados.setValue(0);
     setGirar(true);
+  };
+
+  const iniciarTemporizador = () => {
+    setTemporizadorVisible(true);
+    timerRef.current = setInterval(() => {
+      setTiempoRestante((prev) => {
+        if (prev === 0) {
+          clearInterval(timerRef.current);
+          setTemporizadorVisible(false);
+          setTemporizadorIniciado(false);
+          closeModal();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const obtenerRetoDesdeFirebase = async () => {
+    try {
+      const referenciaRetos = firestore().collection('RetosAmigos');
+      const snapshot = await referenciaRetos.get();
+      const retos = snapshot.docs
+        .map((doc) => ({ ...doc.data(), id: doc.id }))
+        .filter((data) => data.Reto);
+
+      if (retos.length > 0) {
+        const retoAleatorio = retos[Math.floor(Math.random() * retos.length)];
+        setReto(retoAleatorio.Reto);
+        setTiempoDeReto(retoAleatorio.Tiempo);
+        setModalVisible(true);
+        setTiempoRestante(retoAleatorio.Tiempo);
+        iniciarTemporizador();
+      } else {
+        console.log('No hay retos disponibles.');
+      }
+    } catch (error) {
+      console.error('Error al obtener retos:', error);
+    }
   };
 
   useEffect(() => {
@@ -40,10 +98,22 @@ const Ruleta = () => {
     }
   };
 
-  const seleccionarGanador = () => {
+  const eliminarParticipante = (index) => {
+    setParticipantes((prev) => {
+      const nuevosParticipantes = [...prev];
+      nuevosParticipantes.splice(index, 1);
+      return nuevosParticipantes;
+    });
+  };
+
+  const seleccionarGanador = async () => {
     const indiceGanador = Math.floor(Math.random() * participantes.length);
     setGanador(participantes[indiceGanador]);
     setCasillaGanadora(indiceGanador);
+
+    // Enviar datos a la pantalla Consejo
+
+    await obtenerRetoDesdeFirebase();
   };
 
   const renderCasillas = () => {
@@ -57,11 +127,10 @@ const Ruleta = () => {
       const translateX = radio * Math.cos(radianes);
       const translateY = radio * Math.sin(radianes);
 
-      // Estilos adicionales para la casilla ganadora
       const casillaStyles =
         casillaGanadora !== null && casillaGanadora === index
           ? {
-              backgroundColor: '#800000', // Rojo oscuro para resaltar la casilla ganadora
+              backgroundColor: '#800000',
               transform: [
                 { translateX: translateX * 1.2 },
                 { translateY: translateY * 1.2 },
@@ -74,11 +143,16 @@ const Ruleta = () => {
         <Animated.View
           key={index}
           style={[
-            styles.casilla,
+            styles.casillaContainer,
             { transform: [{ translateX }, { translateY }], ...casillaStyles },
           ]}
         >
-          <Text style={styles.nombreParticipante}>{participante}</Text>
+          <View style={styles.casillaContent}>
+            <Text style={styles.nombreParticipante}>{participante}</Text>
+          </View>
+          <TouchableOpacity onPress={() => eliminarParticipante(index)} style={styles.eliminarIcono}>
+            <FontAwesome5 name="times-circle" color={'#ff0000'} size={15} />
+          </TouchableOpacity>
         </Animated.View>
       );
     });
@@ -91,38 +165,60 @@ const Ruleta = () => {
           style={[
             styles.botonContainer,
             {
-              transform: [
-                { rotate: rotacion },
-              ],
+              transform: [{ rotate: rotacion }],
             },
           ]}
         >
           <TouchableOpacity onPress={iniciarGiro} style={styles.gira}>
-            <Text style={styles.giraText}>Girar la Ruleta</Text>
+            <Text style={styles.giraText}>Girar</Text>
           </TouchableOpacity>
         </Animated.View>
         {renderCasillas()}
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Nuevo participante"
-        value={nombreNuevo}
-        onChangeText={(text) => setNombreNuevo(text)}
-      />
-      <TouchableOpacity onPress={agregarParticipante} style={styles.boton}>
-        <Text style={styles.botonText}>Agregar Participante</Text>
-      </TouchableOpacity>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nuevo participante"
+          value={nombreNuevo}
+          onChangeText={(text) => setNombreNuevo(text)}
+        />
+        <TouchableOpacity onPress={agregarParticipante} style={styles.botonAgregar}>
+          <Text style={styles.botonText}>Agregar</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal isVisible={modalVisible} onBackdropPress={closeModal}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalText}>{ganador}</Text>
+          {reto && (
+            <View style={styles.retoContainer}>
+              <Ionicons name="bulb" color="#000000" size={30} style={styles.iconoReto} />
+              <Text style={styles.modalText}>{reto}</Text>
+            </View>
+          )}
+          {temporizadorVisible && (
+            <View style={styles.tiempoContainer}>
+              <Ionicons name="timer" color="#000000" size={30} style={styles.iconoTemporizador} />
+              <Text style={styles.modalText}>Tiempo restante: {tiempoRestante}</Text>
+            </View>
+          )}
+
+          <TouchableOpacity onPress={closeModal} style={styles.modalButton}>
+            <Text style={styles.modalButtonText}>Cerrar</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#2C3E50',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    backgroundColor: '#2C3E50', // Fondo negro
   },
   ruletaContainer: {
     position: 'relative',
@@ -131,16 +227,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  casilla: {
+  casillaContainer: {
     position: 'absolute',
     width: 80,
-    height: 20,
+    height: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 5,
+    borderRadius: 50,
+  },
+  casillaContent: {
+    alignItems: 'center',
   },
   nombreParticipante: {
-    color: '#FFF', // Texto blanco para mayor contraste
+    color: '#FFF',
+  },
+  eliminarIcono: {
+    position: 'absolute',
+    bottom: -10,
+    left: '50%',
+    marginLeft: -10,
   },
   botonContainer: {
     position: 'absolute',
@@ -151,39 +256,78 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#800000', // Rojo oscuro
+    backgroundColor: '#800000',
     justifyContent: 'center',
     alignItems: 'center',
   },
   giraText: {
-    color: '#FFF', // Texto blanco para mayor contraste
+    color: '#FFF',
   },
-  ganadorText: {
-    color: '#800000', // Rojo oscuro
-    fontSize: 25,
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  boton: {
-    padding: 10,
-    backgroundColor: '#4A235A', // Morado oscuro
-    borderRadius: 5,
-    justifyContent: 'center',
+  inputContainer: {
+    width:'70%',
+    height:'10%',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-  },
-  botonText: {
-    color: '#FFF', // Texto blanco para mayor contraste
+    marginTop: 25,
   },
   input: {
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
-    marginTop: 60,
-    padding: 10,
-    width: 200,
-    backgroundColor: '#0000', 
+    flex: 1,
+    backgroundColor: '#FFF',
     borderRadius: 5,
+    marginRight: 10,
+    paddingLeft: 10,
+    color:'black',
+  },
+  botonAgregar: {
+    padding: 10,
+    backgroundColor: '#4A235A',
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  botonText: {
+    color: '#FFF',
+  },
+  modalContainer: {
+    backgroundColor: '#FFF',
+    padding: 20,
+    borderRadius: 10,
+  },
+  modalText: {
+    fontSize: 15,
+    marginBottom: 10,
+    color: 'black',
+    textAlign: 'center',
+    marginRight: 20,
+  },
+  modalButton: {
+    backgroundColor: '#800000',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  modalButtonText: {
+    color: '#FFF',
+  },
+  tiempoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  iconoTemporizador: {
+    marginRight: 10,
+  },
+  retoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  iconoReto: {
+    marginRight: 10,
   },
 });
 

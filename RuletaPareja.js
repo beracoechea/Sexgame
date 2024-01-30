@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing } from 'react-native';
 import Modal from 'react-native-modal';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import firestore from '@react-native-firebase/firestore';
 
 const RuletaPareja = ({ route }) => {
   const { tipo, participantes: participantesIniciales } = route.params;
@@ -12,14 +14,17 @@ const RuletaPareja = ({ route }) => {
   const [casillaGanadora, setCasillaGanadora] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [tiempoRestante, setTiempoRestante] = useState(15);
+  const [reto, setReto] = useState(null);
+  const [tiempoDeReto, setTiempoDeReto] = useState(15); // Valor predeterminado
 
   const grados = new Animated.Value(0);
 
-  // Función para seleccionar al ganador
-  const seleccionarGanador = () => {
+  const seleccionarGanador = async () => {
     const indiceGanador = Math.floor(Math.random() * participantes.length);
     setGanador(participantes[indiceGanador]);
     setCasillaGanadora(indiceGanador);
+
+    await obtenerRetoDesdeFirebase();
   };
 
   const rotacion = grados.interpolate({
@@ -69,7 +74,37 @@ const RuletaPareja = ({ route }) => {
     });
   };
 
+  const obtenerRetoDesdeFirebase = async () => {
+    try {
+      const referenciaRetos = firestore().collection('RetosPareja');
+      const snapshot = await referenciaRetos.get();
+      const retos = [];
+
+      snapshot.forEach((doc) => {
+        const reto = doc.data().Reto;
+        const tiempoDeReto = doc.data().Tiempo; // Agrega esta línea para obtener el tiempo de la base de datos
+        if (reto) {
+          retos.push({ reto, tiempoDeReto });
+        }
+      });
+
+      if (retos.length > 0) {
+        const retoAleatorio = retos[Math.floor(Math.random() * retos.length)];
+        setReto(retoAleatorio.reto);
+        setTiempoDeReto(retoAleatorio.tiempoDeReto);
+        setModalVisible(true);
+        setTiempoRestante(retoAleatorio.tiempoDeReto);
+      } else {
+        console.log('No hay retos disponibles.');
+      }
+    } catch (error) {
+      console.error('Error al obtener retos:', error);
+    }
+  };
+
   useEffect(() => {
+    let interval;
+
     if (girar) {
       Animated.timing(grados, {
         toValue: 360,
@@ -79,33 +114,25 @@ const RuletaPareja = ({ route }) => {
       }).start(() => {
         setGirar(false);
         seleccionarGanador();
-        setModalVisible(true);
-        // Reiniciar el tiempo restante al abrir el modal
-        setTiempoRestante(15);
       });
     }
-  }, [girar]);
 
-  // Actualizar el tiempo restante cada segundo
-  useEffect(() => {
-    let interval;
     if (modalVisible && tiempoRestante > 0) {
       interval = setInterval(() => {
         setTiempoRestante((prev) => prev - 1);
       }, 1000);
     } else if (modalVisible) {
-      // Si el tiempo llega a cero, ocultar el modal
       setModalVisible(false);
     }
-    // Limpiar el intervalo al salir del modal o al llegar a 0
-    return () => clearInterval(interval);
-  }, [modalVisible, tiempoRestante]);
 
-  // Función para cerrar el modal
+    return () => clearInterval(interval);
+  }, [girar, modalVisible, tiempoRestante]);
+
   const closeModal = () => {
-    setModalVisible(false);
-    // Aquí puedes reiniciar el cronómetro si es necesario
-    setTiempoRestante(15);
+    if (modalVisible) {
+      setModalVisible(false);
+      setTiempoRestante(tiempoDeReto); // Reiniciar al valor original
+    }
   };
 
   return (
@@ -122,22 +149,31 @@ const RuletaPareja = ({ route }) => {
           ]}
         >
           <TouchableOpacity onPress={iniciarGiro} style={styles.gira}>
-            <Text style={styles.giraText}>Girar la Ruleta</Text>
+            <Text style={styles.giraText}>Girar</Text>
           </TouchableOpacity>
         </Animated.View>
         {renderCasillas()}
       </View>
 
-      {/* Modal */}
       <Modal isVisible={modalVisible} onBackdropPress={closeModal}>
         <View style={styles.modalContainer}>
           <Text style={styles.modalText}>{ganador}</Text>
-          {/* Mostrar el tiempo restante en el modal */}
-          <Text style={styles.modalText}>Tiempo restante: {tiempoRestante} segundos</Text>
-          {/* Aquí puedes agregar el componente de cronómetro y el reto */}
+          {reto && (
+            <View style={styles.retoContainer}>
+              <Ionicons name="bulb" color="#000000" size={30} style={styles.iconoReto} />
+              <Text style={styles.modalText}>{reto}</Text>
+            </View>
+          )}
+          <View style={styles.tiempoContainer}>
+            <Ionicons name="timer" color="#000000" size={30} style={styles.iconoTemporizador} />
+            <Text style={styles.modalText}>Tiempo restante: {tiempoRestante}</Text>
+          </View>
+
+
           <TouchableOpacity onPress={closeModal} style={styles.modalButton}>
             <Text style={styles.modalButtonText}>Cerrar</Text>
           </TouchableOpacity>
+          
         </View>
       </Modal>
     </View>
@@ -175,9 +211,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gira: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#800000',
     justifyContent: 'center',
     alignItems: 'center',
@@ -187,15 +223,15 @@ const styles = StyleSheet.create({
   },
   // Estilos para el modal
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFF',
     padding: 20,
     borderRadius: 10,
   },
   modalText: {
-    fontSize: 18,
+    fontSize: 15,
     marginBottom: 10,
-    color:'black',
-    textAlign:'center',
+    color: 'black',
+    textAlign: 'center',
   },
   modalButton: {
     backgroundColor: '#800000',
@@ -206,6 +242,22 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     color: '#FFF',
+  },
+  tiempoContainer: {
+    flexDirection: 'row', // Alinea los elementos horizontalmente
+    alignItems: 'center',  // Alinea los elementos verticalmente al centro
+    marginBottom: 10,
+  },
+  iconoTemporizador: {
+    marginRight: 10, // Espacio a la derecha del ícono del temporizador
+  },
+  retoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  iconoReto: {
+    marginRight: 10,
   },
 });
 

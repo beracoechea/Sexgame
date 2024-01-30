@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View, TextInput, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native'; 
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const Usuarios = () => {
   const [nombre1, setNombre1] = useState('');
@@ -39,19 +40,10 @@ const Usuarios = () => {
       />
 
       <TouchableOpacity style={styles.iconButton} onPress={handleButtonPress}>
-        <Image source={require('./images/masculino.png')} style={styles.iconImage} />
-        <Text style={styles.buttonText}> Pareja Gay</Text>
+      <Ionicons name="game-controller" color="#000000" size={30} style={styles.iconImage} />
+        <Text style={styles.buttonText}> Jugar</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.iconButton} onPress={handleButtonPress}>
-        <Image source={require('./images/hetero.png')} style={styles.iconImage} />
-        <Text style={styles.buttonText}> Pareja Heterosexual</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.iconButton} onPress={handleButtonPress}>
-        <Image source={require('./images/feminino.png')} style={styles.iconImage} />
-        <Text style={styles.buttonText}> Pareja Lesbiana</Text>
-      </TouchableOpacity>
     </View>
     
   );
@@ -64,6 +56,8 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     marginRight: 10,
+    marginLeft:'25%',
+    
   },
 
   container: {
@@ -88,15 +82,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderRadius: 20,
     padding: 15,
     width: '80%',
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#3498db', // Color del borde del botón
+    alignItems: 'center',
   },
   buttonText: {
     color: 'black',
     fontSize: 16,
+
   },
 });
