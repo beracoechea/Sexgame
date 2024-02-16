@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 32,
     color: '#ffffff',
-    fontFamily: 'cursive',
+    
     fontWeight: 'bold',
     textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 2, height: 2 },
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 32,
     color: '#ffffff',
-    fontFamily: 'cursive',
+    
     fontWeight: 'bold',
     textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 2, height: 2 },

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, AppState } from 'react-native';
 import Modal from 'react-native-modal';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import firestore from '@react-native-firebase/firestore';
+import Sound from 'react-native-sound';
 
 const RuletaPareja = ({ route }) => {
   const { tipo, participantes: participantesIniciales } = route.params;
@@ -16,8 +17,34 @@ const RuletaPareja = ({ route }) => {
   const [tiempoRestante, setTiempoRestante] = useState(15);
   const [reto, setReto] = useState(null);
   const [tiempoDeReto, setTiempoDeReto] = useState(15); // Valor predeterminado
+  const [nivelReto, setNivelReto] = useState(1); // Estado para almacenar el nivel actual del reto
+  const [numTiradas, setNumTiradas] = useState(0); // Estado para almacenar el número de tiradas
+
+  const tiradasPorNivel = 10; // Cantidad de tiradas necesarias para aumentar el nivel
+  const nivelMaximo = 5; // Nivel máximo de los retos
 
   const grados = new Animated.Value(0);
+
+  const reproducirAlerta = async () => {
+    try {
+      const sound = new Sound(require('./sonidos/sonidomp3.mp3'), (error) => {
+        if (error) {
+          console.error('Error al cargar el archivo de audio:', error);
+        } else {
+          sound.play();
+        }
+      });
+    } catch (error) {
+      console.error('Error al reproducir el sonido:', error);
+    }
+  };
+
+  useEffect(() => {
+
+    if (modalVisible && tiempoRestante === 6) {
+      reproducirAlerta();
+    }
+  }, [modalVisible, tiempoRestante]);
 
   const seleccionarGanador = async () => {
     const indiceGanador = Math.floor(Math.random() * participantes.length);
@@ -35,6 +62,7 @@ const RuletaPareja = ({ route }) => {
   const iniciarGiro = () => {
     grados.setValue(0);
     setGirar(true);
+    setNumTiradas(numTiradas + 1); // Incrementar el número de tiradas al iniciar el giro
   };
 
   const renderCasillas = () => {
@@ -77,17 +105,17 @@ const RuletaPareja = ({ route }) => {
   const obtenerRetoDesdeFirebase = async () => {
     try {
       const referenciaRetos = firestore().collection('RetosPareja');
-      const snapshot = await referenciaRetos.get();
+      const snapshot = await referenciaRetos.where('Nivel', '==', nivelReto).get(); // Filtrar por nivel actual
       const retos = [];
-
+  
       snapshot.forEach((doc) => {
         const reto = doc.data().Reto;
-        const tiempoDeReto = doc.data().Tiempo; // Agrega esta línea para obtener el tiempo de la base de datos
+        const tiempoDeReto = doc.data().Tiempo;
         if (reto) {
           retos.push({ reto, tiempoDeReto });
         }
       });
-
+  
       if (retos.length > 0) {
         const retoAleatorio = retos[Math.floor(Math.random() * retos.length)];
         setReto(retoAleatorio.reto);
@@ -95,12 +123,22 @@ const RuletaPareja = ({ route }) => {
         setModalVisible(true);
         setTiempoRestante(retoAleatorio.tiempoDeReto);
       } else {
-        console.log('No hay retos disponibles.');
+        console.log('No hay retos disponibles para este nivel.');
       }
     } catch (error) {
       console.error('Error al obtener retos:', error);
     }
   };
+
+
+  useEffect(() => {
+    if (girar) {
+      // Incrementar el nivel cada cierto número de tiradas
+      if (numTiradas % tiradasPorNivel === 0 && nivelReto < nivelMaximo) {
+        setNivelReto((prevNivel) => prevNivel + 1);
+      }
+    }
+  }, [girar, numTiradas, nivelReto, nivelMaximo]);
 
   useEffect(() => {
     let interval;
@@ -149,7 +187,8 @@ const RuletaPareja = ({ route }) => {
           ]}
         >
           <TouchableOpacity onPress={iniciarGiro} style={styles.gira}>
-            <Text style={styles.giraText}>Girar</Text>
+          <Ionicons name="heart-circle" color={'red'} size={60}>
+            </Ionicons>
           </TouchableOpacity>
         </Animated.View>
         {renderCasillas()}
@@ -185,14 +224,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    backgroundColor: '#2C3E50',
+    backgroundColor: '#ffafde',
   },
   ruletaContainer: {
     position: 'relative',
-    width: 200,
-    height: 200,
+    width: '80%',
+    height: '50%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: '#c999af',
+    elevation: 50, // Sombra en Android
+    shadowColor: '#000', // Sombra en iOS
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   casilla: {
     position: 'absolute',
@@ -201,9 +250,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 5,
+    
+    
   },
   nombreParticipante: {
-    color: '#FFF',
+    color: '#fff',
+    
   },
   botonContainer: {
     position: 'absolute',
@@ -225,13 +277,15 @@ const styles = StyleSheet.create({
   modalContainer: {
     backgroundColor: '#FFFF',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 30,
   },
   modalText: {
     fontSize: 15,
-    marginBottom: 10,
+    marginBottom: 20,
     color: 'black',
     textAlign: 'center',
+    marginRight: 40,
+    marginLeft: 10,
   },
   modalButton: {
     backgroundColor: '#800000',

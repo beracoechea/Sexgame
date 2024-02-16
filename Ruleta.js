@@ -4,6 +4,8 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Modal from 'react-native-modal';
 import firestore from '@react-native-firebase/firestore';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import Sound from 'react-native-sound';
 
 
 const Ruleta = ({ navigation }) => {
@@ -21,7 +23,19 @@ const Ruleta = ({ navigation }) => {
   const [temporizadorIniciado, setTemporizadorIniciado] = useState(false);
   const timerRef = useRef(null);
 
-
+  const reproducirAlerta = async () => {
+    try {
+      const sound = new Sound(require('./sonidos/sonidomp3.mp3'), (error) => {
+        if (error) {
+          console.error('Error al cargar el archivo de audio:', error);
+        } else {
+          sound.play();
+        }
+      });
+    } catch (error) {
+      console.error('Error al reproducir el sonido:', error);
+    }
+  };
   const closeModal = () => {
     clearInterval(timerRef.current);
     setTemporizadorVisible(false);
@@ -85,6 +99,12 @@ const Ruleta = ({ navigation }) => {
       });
     }
   }, [girar]);
+  useEffect(() => {
+
+    if (modalVisible && tiempoRestante === 6) {
+      reproducirAlerta();
+    }
+  }, [modalVisible, tiempoRestante]);
 
   const rotacion = grados.interpolate({
     inputRange: [0, 360],
@@ -169,8 +189,8 @@ const Ruleta = ({ navigation }) => {
             },
           ]}
         >
-          <TouchableOpacity onPress={iniciarGiro} style={styles.gira}>
-            <Text style={styles.giraText}>Girar</Text>
+          <TouchableOpacity onPress={participantes.length > 1 ? iniciarGiro : null} style={[styles.gira, { opacity: participantes.length > 1 ? 1 : 0.5 }]}>
+               <FontAwesome name="arrows-alt"color={'red'}size={60}></FontAwesome>
           </TouchableOpacity>
         </Animated.View>
         {renderCasillas()}
@@ -216,16 +236,26 @@ const Ruleta = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2C3E50',
+    backgroundColor: '#a2d2ff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   ruletaContainer: {
     position: 'relative',
-    width: 200,
-    height: 200,
+    width: '80%',
+    height: '50%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: '#4d82be',
+    elevation: 50, // Sombra en Android
+    shadowColor: '#000', // Sombra en iOS
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   casillaContainer: {
     position: 'absolute',
@@ -239,7 +269,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nombreParticipante: {
-    color: '#FFF',
+    color: '#FFFF',
+    
   },
   eliminarIcono: {
     position: 'absolute',
@@ -271,6 +302,7 @@ const styles = StyleSheet.create({
     marginTop: 25,
   },
   input: {
+    marginTop:'-10%',
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
@@ -282,6 +314,7 @@ const styles = StyleSheet.create({
     color:'black',
   },
   botonAgregar: {
+    marginTop:'-10%',
     padding: 10,
     backgroundColor: '#4A235A',
     borderRadius: 5,
@@ -294,14 +327,15 @@ const styles = StyleSheet.create({
   modalContainer: {
     backgroundColor: '#FFF',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 30,
   },
   modalText: {
     fontSize: 15,
-    marginBottom: 10,
+    marginBottom: 20,
     color: 'black',
     textAlign: 'center',
-    marginRight: 20,
+    marginRight: 40,
+    marginLeft:10,
   },
   modalButton: {
     backgroundColor: '#800000',
